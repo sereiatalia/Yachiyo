@@ -301,7 +301,6 @@ async function handleSetup(interaction) {
                     label: role.name,
                     description: `Add/remove the ${role.name} role`,
                     value: role.id,
-                    emoji: '🎭'
                 }))
             )
     );
@@ -375,7 +374,7 @@ async function handleSetup(interaction) {
     }
 
     await InteractionHelper.safeEditReply(interaction, {
-        embeds: [successEmbed('Success', `✅ Reaction role panel created in ${channel}!\n\n${message.url}`)]
+        embeds: [successEmbed('Success', `🍥 Reaction role panel created in ${channel}!\n\n${message.url}`)]
     });
 }
 
@@ -579,7 +578,6 @@ async function repostReactionRolePanel(guild, panelData, client, guildId, fallba
                     label: role.name.substring(0, 100),
                     description: `Add/remove the ${role.name} role`.substring(0, 100),
                     value: role.id,
-                    emoji: '🎭',
                 })),
             ),
     );
