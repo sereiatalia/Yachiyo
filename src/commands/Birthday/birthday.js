@@ -71,7 +71,7 @@ export default {
                         .setName('channel')
                         .setDescription('The text channel for announcements. Leave empty to disable.')
                         .addChannelTypes(ChannelType.GuildText)
-                        .setRequired(false)
+                        .setRequired(true)
                 )
         ),
 
