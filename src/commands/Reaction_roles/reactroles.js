@@ -63,6 +63,16 @@ export default {
                         .setDescription('Fifth role to add')
                         .setRequired(false)
                 )
+                .addRoleOption(option =>
+                    option.setName('role6')
+                        .setDescription('6th role to add')
+                        .setRequired(false)
+                )
+                .addRoleOption(option =>
+                    option.setName('role7')
+                        .setDescription('7th role to add')
+                        .setRequired(false)
+                )
         )
         .addSubcommand(subcommand =>
             subcommand
@@ -214,19 +224,19 @@ async function handleSetup(interaction) {
     }
 
     const existingPanels = await getAllReactionRoleMessages(interaction.client, interaction.guildId);
-    if (existingPanels && existingPanels.length >= 5) {
+    if (existingPanels && existingPanels.length >= 7) {
         throw createError(
             'Panel limit reached',
             ErrorTypes.VALIDATION,
-            'Your guild has reached the maximum of 5 reaction role panels. Delete an existing panel to create a new one.',
-            { maxPanels: 5, currentPanels: existingPanels.length }
+            'Your guild has reached the maximum of 7 reaction role panels. Delete an existing panel to create a new one.',
+            { maxPanels: 7, currentPanels: existingPanels.length }
         );
     }
 
     const roles = [];
     const roleValidationErrors = [];
     
-    for (let i = 1; i <= 5; i++) {
+    for (let i = 1; i <= 7; i++) {
         const role = interaction.options.getRole(`role${i}`);
         if (role) {
             if (role.position >= interaction.guild.members.me.roles.highest.position) {
