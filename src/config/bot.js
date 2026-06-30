@@ -59,9 +59,8 @@ export const botConfig = {
   applications: {
     // Default questions shown when someone fills out an application.
     defaultQuestions: [
-      { question: "What is your name?", required: true },
-      { question: "How old are you?", required: true },
-      { question: "Why do you want to join?", required: true },
+      { question: "𑣲NAME: ", required: true },
+      { question: "𑣲REASON: ", required: true },
     ],
 
     // Embed colors by application status.
@@ -72,13 +71,13 @@ export const botConfig = {
     },
 
     // How long users must wait before submitting another application (hours).
-    applicationCooldown: 24,
+    applicationCooldown: 7,
 
     // Auto-delete denied applications after this many days.
-    deleteDeniedAfter: 7,
+    deleteDeniedAfter: 3,
 
     // Auto-delete approved applications after this many days.
-    deleteApprovedAfter: 30,
+    deleteApprovedAfter: 7,
 
     // Role IDs allowed to manage applications.
     managerRoles: [], // Will be populated from environment or database
@@ -91,8 +90,8 @@ export const botConfig = {
   embeds: {
     colors: {
       // Main brand colors.
-      primary: "#336699",
-      secondary: "#2F3136",
+      primary: "#FF99C2",
+      secondary: "#FFD4E8",
 
       // Standard status colors for success/error/warning/info messages.
       success: "#57F287",
@@ -139,7 +138,7 @@ export const botConfig = {
     },
     footer: {
       // Default footer text used in bot embeds.
-      text: "Titan Bot",
+      text: ". ݁₊ ⊹ . ݁ ⟡ ݁ . ⊹ ₊ ݁.",
       // Footer icon URL (null = no icon).
       icon: null,
     },
@@ -159,9 +158,9 @@ export const botConfig = {
   economy: {
     currency: {
       // Currency display name.
-      name: "coins",
+      name: "points",
       // Plural display name.
-      namePlural: "coins",
+      namePlural: "points",
       // Currency symbol shown in balances.
       symbol: "$",
     },
@@ -170,21 +169,21 @@ export const botConfig = {
     startingBalance: 0,
 
     // Maximum bank amount before upgrades (if upgrades are used).
-    baseBankCapacity: 100000,
+    baseBankCapacity: 1000000,
 
     // Daily reward amount.
     dailyAmount: 100,
 
     // Work command random payout range.
-    workMin: 10,
+    workMin: 1,
     workMax: 100,
 
     // Beg command random payout range.
-    begMin: 5,
+    begMin: 1,
     begMax: 50,
 
     // Chance to succeed when robbing (0.4 = 40%).
-    robSuccessRate: 0.4,
+    robSuccessRate: 0.3,
 
     // Jail time after failed rob (milliseconds).
     // 3600000 = 1 hour.
