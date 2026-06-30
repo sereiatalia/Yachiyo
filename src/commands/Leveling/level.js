@@ -28,7 +28,7 @@ export default {
                 .addIntegerOption((option) =>
                     option
                         .setName('xp_min')
-                        .setDescription('Minimum XP awarded per message (default: 15)')
+                        .setDescription('Minimum XP awarded per message (default: 1)')
                         .setMinValue(1)
                         .setMaxValue(500)
                         .setRequired(false),
@@ -86,11 +86,11 @@ export default {
             if (subcommand === 'setup') {
                 const channel = interaction.options.getChannel('channel');
                 const xpMin = interaction.options.getInteger('xp_min') ?? 1;
-                const xpMax = interaction.options.getInteger('xp_max') ?? 1;
+                const xpMax = interaction.options.getInteger('xp_max') ?? 25;
                 const message =
                     interaction.options.getString('message') ??
                     '{user} has leveled up to level {level}!';
-                const xpCooldown = interaction.options.getInteger('xp_cooldown') ?? 5;
+                const xpCooldown = interaction.options.getInteger('xp_cooldown') ?? 60;
 
                 if (xpMin > xpMax) {
                     return await replyUserError(interaction, { type: ErrorTypes.VALIDATION, message: 'Minimum XP (**${xpMin}**) cannot be greater than maximum XP (**${xpMax}**).' });
