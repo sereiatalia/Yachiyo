@@ -85,12 +85,12 @@ export default {
 
             if (subcommand === 'setup') {
                 const channel = interaction.options.getChannel('channel');
-                const xpMin = interaction.options.getInteger('xp_min') ?? 15;
-                const xpMax = interaction.options.getInteger('xp_max') ?? 25;
+                const xpMin = interaction.options.getInteger('xp_min') ?? 1;
+                const xpMax = interaction.options.getInteger('xp_max') ?? 1;
                 const message =
                     interaction.options.getString('message') ??
                     '{user} has leveled up to level {level}!';
-                const xpCooldown = interaction.options.getInteger('xp_cooldown') ?? 60;
+                const xpCooldown = interaction.options.getInteger('xp_cooldown') ?? 5;
 
                 if (xpMin > xpMax) {
                     return await replyUserError(interaction, { type: ErrorTypes.VALIDATION, message: 'Minimum XP (**${xpMin}**) cannot be greater than maximum XP (**${xpMax}**).' });
