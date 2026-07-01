@@ -5,9 +5,16 @@ import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHan
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 const FISH_COOLDOWN = 45 * 60 * 0; 
-const BASE_MIN_REWARD = 1;
-const BASE_MAX_REWARD = 100;
 const FISHING_ROD_MULTIPLIER = 1.5;
+
+// Reward range per rarity. Higher rarity = higher payout (capped at 100 for legendary).
+const REWARD_RANGES = {
+    common: { min: 1, max: 20 },
+    uncommon: { min: 15, max: 40 },
+    rare: { min: 35, max: 65 },
+    epic: { min: 55, max: 85 },
+    legendary: { min: 75, max: 100 },
+};
 
 const FISH_TYPES = [
     { name: 'Bass', emoji: '🐟', rarity: 'common' },
@@ -81,9 +88,11 @@ export default {
                 fishCaught = FISH_TYPES.find(f => f.rarity === 'legendary');
             }
 
+            // Reward now scales with the rarity of the fish caught
+            const { min: rewardMin, max: rewardMax } = REWARD_RANGES[fishCaught.rarity];
             const baseEarned = Math.floor(
-                Math.random() * (BASE_MAX_REWARD - BASE_MIN_REWARD + 1)
-            ) + BASE_MIN_REWARD;
+                Math.random() * (rewardMax - rewardMin + 1)
+            ) + rewardMin;
 
             let finalEarned = baseEarned;
             let multiplierMessage = "";
