@@ -46,7 +46,7 @@ function buildEmbed(state, reward, resultText = null) {
     const statusDisplay = renderUI(state.wrong);
 
     const embed = createEmbed({
-        title: `🎮 Hangman :: ${state.difficultyName.toUpperCase()}`,
+        title: `🎮 Guess The Word:: ${state.difficultyName.toUpperCase()}`,
         description: `Use the buttons below to guess letters.\n\n${statusDisplay}`,
         color: state.wrong >= MAX_WRONG ? '#E74C3C' : '#FF69B4',
     })
@@ -66,7 +66,7 @@ function letterButton(key, state) {
     const isCorrect = isYZ ? (state.word.toUpperCase().includes('Y') || state.word.toUpperCase().includes('Z')) : state.word.toUpperCase().includes(key);
 
     return new ButtonBuilder()
-        .setCustomId(`hangman_guess_${key}`)
+        .setCustomId(`gtw_guess_${key}`)
         .setLabel(isYZ ? 'Y / Z' : key)
         .setDisabled(guessed || state.finished)
         .setStyle(guessed ? (isCorrect ? ButtonStyle.Success : ButtonStyle.Danger) : ButtonStyle.Primary);
@@ -81,7 +81,7 @@ function buildRows(state) {
 export default {
     category: 'Economy',
     data: new SlashCommandBuilder()
-        .setName('hangman')
+        .setName('gtw')
         .setDescription('Guess the hidden word to win cash!')
         .addStringOption(option => option.setName('difficulty').setDescription('Select difficulty').setRequired(true)
             .addChoices(
@@ -127,7 +127,7 @@ export default {
         const collector = (await interaction.fetchReply()).createMessageComponentCollector({ componentType: ComponentType.Button, filter: i => i.user.id === userId, time: GAME_TIME });
 
         collector.on('collect', async i => {
-            const key = i.customId.replace('hangman_guess_', '');
+            const key = i.customId.replace('gtw_guess_', '');
             if (key === 'YZ') { state.guessed.add('Y'); state.guessed.add('Z'); } else { state.guessed.add(key); }
             
             if (!(key === 'YZ' ? (state.word.toUpperCase().includes('Y') || state.word.toUpperCase().includes('Z')) : state.word.toUpperCase().includes(key))) {
@@ -148,5 +148,5 @@ export default {
                 await i.update({ embeds: [buildEmbed(state, diffConfig.maxReward)], components: buildRows(state) });
             }
         });
-    }, { command: 'hangman' })
+    }, { command: 'gtw' })
 };
