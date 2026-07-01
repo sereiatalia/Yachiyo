@@ -9,13 +9,13 @@ import { createEmbed } from '../../utils/embeds.js';
 import { getAllEconomyData } from '../../utils/economy.js';
 import { withErrorHandling } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
-import { RARITY_ORDER, RARITY_CONFIG, fishScore } from '../../utils/fishConfig.js';
+import { RARITY_ORDER, RARITY_CONFIG, fishScore } from './modules/fishConfig.js';
 
 const LEADERBOARD_SIZE = 10;
 
 export default {
     data: new SlashCommandBuilder()
-        .setName('fish_leaderboard')
+        .setName('fishleaderboard')
         .setDescription('See who has caught the best fish in this server'),
 
     execute: withErrorHandling(async (interaction, config, client) => {
@@ -60,5 +60,5 @@ export default {
         }).setFooter({ text: 'Ranked by rarity-weighted score 🎣' });
 
         await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
-    }, { command: 'fish_leaderboard' })
+    }, { command: 'fishleaderboard' })
 };
