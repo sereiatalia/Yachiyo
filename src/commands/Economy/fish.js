@@ -16,7 +16,7 @@ import {
     applyPity,
     recordCatch,
     formatMoney,
-} from '../../utils/fishConfig.js';
+} from './modules/fishConfig.js';
 
 // NOTE: cooldown is currently disabled (45 * 60 * 0 = 0ms). Left as-is from
 // the original file — flag if you want this re-enabled.
