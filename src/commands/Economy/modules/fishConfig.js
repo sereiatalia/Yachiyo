@@ -3,7 +3,7 @@
 // Used by /fish, /fish_shop, and /fish_leaderboard so odds, rewards, and
 // rod behavior only live in one place.
 
-export const RARITY_ORDER = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic', 'secret'];
+export const RARITY_ORDER = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic', 'celestial', 'secret'];
 
 export const RARITY_CONFIG = {
     common:    { label: 'Common',    emoji: '⭐',    color: '#95A5A6', chance: 0.35, reward: [1, 20] },
@@ -12,11 +12,10 @@ export const RARITY_CONFIG = {
     epic:      { label: 'Epic',      emoji: '⭐⭐⭐⭐', color: '#9B59B6', chance: 0.08, reward: [55, 100] },
     legendary: { label: 'Legendary', emoji: '🌟',    color: '#F1C40F', chance: 0.04, reward: [100, 200], pity: 100 },
     mythic:    { label: 'Mythic',    emoji: '💠',    color: '#E74C3C', chance: 0.02, reward: [200, 500], pity: 300 },
-    secret:    { label: 'Secret',    emoji: '👑',    color: '#FF69B4', chance: 0.0000001, reward: [50000, 50000], pity: 1000 },
+    celestial: { label: 'Celestial', emoji: '💫',    color: '#5DADE2', chance: 0.001, reward: [1000, 2500], pity: 1500 },
+    secret:    { label: 'Secret',    emoji: '👑',    color: '#FF69B4', chance: 0.000001, reward: [10000, 25000], pity: 5000 },
 };
 
-// Non-fish outcomes. These + all RARITY_CONFIG chances above should sum to 1.0
-// (0.05 + 0.05 + 0.35 + 0.25 + 0.15 + 0.08 + 0.04 + 0.02 + 0.01 = 1.00).
 export const ESCAPE_CHANCE = 0.3;
 export const JUNK_CHANCE = 0.2;
 
@@ -37,7 +36,21 @@ export const FISH_TYPES = [
     { name: 'Golden Dragonfish', emoji: '🐉', rarity: 'legendary' },
     { name: 'Kraken',            emoji: '🐙', rarity: 'mythic' },
     { name: 'Leviathan',         emoji: '🌊', rarity: 'mythic' },
+    // NEW FISH (Celestial Rarity)
+    { name: 'Ponyo',             emoji: '🐟', rarity: 'celestial' },
+    { name: 'Poseidon',          emoji: '🔱', rarity: 'celestial' },
+    { name: 'Umi',               emoji: '💧', rarity: 'celestial' },
+    { name: 'Aquaman',           emoji: '🔱', rarity: 'celestial' },
+    { name: 'Jinbe',             emoji: '🐳', rarity: 'celestial' },
+    { name: 'Nami',              emoji: '🧭', rarity: 'celestial' },
+    { name: 'Kaworu',            emoji: '🌊', rarity: 'celestial' },
+    { name: 'Kisame',            emoji: '🦈', rarity: 'celestial' },
+    { name: 'Tamaki',            emoji: '🧜', rarity: 'celestial' },
+    { name: 'Gyarados',          emoji: '🐉', rarity: 'celestial' },
+    // SECRETS
     { name: 'Kokomi',            emoji: '👸', rarity: 'secret' },
+    { name: 'Vodyanitsa',        emoji: '🎶', rarity: 'secret' },
+    { name: 'Ariel',             emoji: '🧜‍♀️', rarity: 'secret' }
 ];
 
 export const JUNK_TYPES = [
@@ -63,8 +76,6 @@ export const CATCH_MESSAGES = [
     'You reel in your catch with expert precision...',
 ];
 
-// Fishing rods available in the shop. Higher tier = higher price, bigger
-// payout bonus, and better odds (via luckBonus, see buildOutcomeTable).
 export const RODS = [
     { id: 'basic_rod',    name: 'Basic Fishing Rod',    emoji: '🎣', price: 5000,    valueBonus: 0.25, luckBonus: 0.02, description: '+25% catch value, slightly better odds' },
     { id: 'advanced_rod', name: 'Advanced Fishing Rod', emoji: '🎣', price: 25000,   valueBonus: 0.50, luckBonus: 0.05, description: '+50% catch value, better odds' },
@@ -72,11 +83,6 @@ export const RODS = [
     { id: 'mythic_rod',   name: 'Mythical Rod',         emoji: '🎣', price: 500000,  valueBonus: 1.50, luckBonus: 0.20, description: '+150% catch value, best odds, rarer junk/escapes' },
 ];
 
-/**
- * Returns the highest-tier rod a user owns, or null.
- * Also treats a legacy `inventory.fishing_rod` boolean (from the old system)
- * as equivalent to owning the Basic Fishing Rod, for backwards compatibility.
- */
 export function getEquippedRod(userData) {
     const owned = RODS.filter(r => userData.inventory?.[r.id]);
     if (userData.inventory?.['fishing_rod'] && !owned.find(r => r.id === 'basic_rod')) {
@@ -90,29 +96,36 @@ export function formatMoney(n) {
     return `$${Math.trunc(n).toLocaleString()}`;
 }
 
-/**
- * Builds the effective outcome -> probability weight table after applying
- * the equipped rod's luck bonus. The rod shifts weight away from escape/junk
- * and into legendary/mythic/secret (weighted more toward the rarer tiers).
- */
 export function buildOutcomeTable(rod) {
     const luck = rod?.luckBonus || 0;
+    const table = { 
+        escape: Math.max(0.005, ESCAPE_CHANCE - luck / 2), 
+        junk: Math.max(0.005, JUNK_CHANCE - luck / 2) 
+    };
+    
+    const remaining = 1 - (table.escape + table.junk);
 
-    const escape = Math.max(0.005, ESCAPE_CHANCE - luck / 2);
-    const junk = Math.max(0.005, JUNK_CHANCE - luck / 2);
-    const reclaimed = (ESCAPE_CHANCE - escape) + (JUNK_CHANCE - junk);
-
-    const boostWeights = { legendary: 0.5, mythic: 0.3, secret: 0.2 };
-
-    const table = { escape, junk };
-    for (const rarity of RARITY_ORDER) {
-        const boost = boostWeights[rarity] ? reclaimed * boostWeights[rarity] : 0;
-        table[rarity] = RARITY_CONFIG[rarity].chance + boost;
+    // Dynamic Secret/Celestial Chances
+    let secretChance = 0.000001 + (luck * 0.0001); // Base chance for no rod / basic / advanced
+    
+    // Hardcoded overrides for the top tier rods
+    if (rod?.id === 'mythic_rod') {
+        secretChance = 0.01; // 1%
+    } else if (rod?.id === 'master_rod') {
+        secretChance = 0.0001; // 0.010%
+    }
+    
+    table.secret = secretChance;
+    table.celestial = 0.005 + luck;
+    
+    // Distribute remaining probability among standard rarities
+    const pool = remaining - (table.secret + table.celestial);
+    for (const r of ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic']) {
+        table[r] = pool * (RARITY_CONFIG[r].chance / 0.95);
     }
     return table;
 }
 
-/** Rolls a single outcome key ('escape' | 'junk' | a rarity name) from a weight table. */
 export function rollOutcome(table) {
     const entries = Object.entries(table);
     const total = entries.reduce((sum, [, w]) => sum + w, 0);
@@ -135,31 +148,44 @@ export function rollReward(rarity) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-/**
- * Applies the pity system. Every cast counts as a "pull" toward legendary,
- * mythic, and secret guarantees. If a threshold is hit, the outcome is
- * forced to that tier (or better) regardless of the random roll.
- * Mutates userData.fishPity and returns the final outcome key to use.
- */
 export function applyPity(userData, rolledOutcome) {
+    // 1. Check and Reset Daily Limit for Secrets
+    const nowString = new Date().toDateString();
+    if (userData.lastDailyReset !== nowString) {
+        userData.lastDailyReset = nowString;
+        userData.dailySecretCount = 0;
+    }
+
     if (!userData.fishPity) {
-        userData.fishPity = { legendary: 0, mythic: 0, secret: 0 };
+        userData.fishPity = { legendary: 0, mythic: 0, celestial: 0, secret: 0 };
     }
     const pity = userData.fishPity;
 
     pity.legendary = (pity.legendary || 0) + 1;
     pity.mythic = (pity.mythic || 0) + 1;
+    pity.celestial = (pity.celestial || 0) + 1;
     pity.secret = (pity.secret || 0) + 1;
 
     let forced = null;
-    if (pity.secret >= RARITY_CONFIG.secret.pity) forced = 'secret';
+    
+    // Check Pity thresholds (Secret has a hard cap of 3 per day)
+    if (pity.secret >= RARITY_CONFIG.secret.pity && userData.dailySecretCount < 3) forced = 'secret';
+    else if (pity.celestial >= RARITY_CONFIG.celestial.pity) forced = 'celestial';
     else if (pity.mythic >= RARITY_CONFIG.mythic.pity) forced = 'mythic';
     else if (pity.legendary >= RARITY_CONFIG.legendary.pity) forced = 'legendary';
 
-    const finalOutcome = forced || rolledOutcome;
+    // If they naturally roll a secret but hit the daily cap, downgrade it to celestial
+    let finalOutcome = forced || rolledOutcome;
+    if (finalOutcome === 'secret' && userData.dailySecretCount >= 3) {
+        finalOutcome = 'celestial';
+    }
 
+    // Reset counters upon successful catch of that tier
     if (finalOutcome === 'secret') {
-        pity.legendary = 0; pity.mythic = 0; pity.secret = 0;
+        userData.dailySecretCount++;
+        pity.legendary = 0; pity.mythic = 0; pity.celestial = 0; pity.secret = 0;
+    } else if (finalOutcome === 'celestial') {
+        pity.legendary = 0; pity.mythic = 0; pity.celestial = 0;
     } else if (finalOutcome === 'mythic') {
         pity.legendary = 0; pity.mythic = 0;
     } else if (finalOutcome === 'legendary') {
@@ -169,7 +195,6 @@ export function applyPity(userData, rolledOutcome) {
     return finalOutcome;
 }
 
-/** Records a successful fish catch (by rarity) into userData for the leaderboard. */
 export function recordCatch(userData, outcome) {
     if (!userData.fishStats) userData.fishStats = {};
     for (const r of RARITY_ORDER) {
@@ -180,9 +205,8 @@ export function recordCatch(userData, outcome) {
     }
 }
 
-// Weighted score for leaderboard ranking — rarer catches count for far more
-// than raw catch count so one Kokomi outranks a pile of Bass.
-const RARITY_SCORE = { common: 1, uncommon: 3, rare: 8, epic: 20, legendary: 60, mythic: 200, secret: 5000 };
+// Updated Score values for the leaderboard
+const RARITY_SCORE = { common: 1, uncommon: 3, rare: 8, epic: 20, legendary: 60, mythic: 200, celestial: 1000, secret: 10000 };
 
 export function fishScore(fishStats) {
     if (!fishStats) return 0;
