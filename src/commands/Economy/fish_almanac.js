@@ -7,12 +7,12 @@ import { RARITY_ORDER, RARITY_CONFIG, FISH_TYPES, formatMoney } from './modules/
 export default {
     data: new SlashCommandBuilder()
         .setName('almanac')
-        .setDescription('View your caught fish and sell them for cash!')
+        .setDescription('View your caught fish and sell them for cash! ( ˶ˆᗜˆ˵ )')
         .addSubcommand(sub => 
-            sub.setName('view').setDescription('View your beautiful fish collection'))
+            sub.setName('view').setDescription('View your beautiful fish collection ✨'))
         .addSubcommand(sub => 
             sub.setName('sell')
-            .setDescription('Sell your caught fish')
+            .setDescription('Sell your caught fish by rarity category 💰')
             .addStringOption(opt => 
                 opt.setName('rarity')
                 .setDescription('Which rarity to sell?')
@@ -21,6 +21,20 @@ export default {
                     { name: 'Sell All Fish', value: 'all' },
                     ...RARITY_ORDER.map(r => ({ name: `Sell ${RARITY_CONFIG[r].label}s`, value: r }))
                 )
+            ))
+        .addSubcommand(sub => 
+            sub.setName('sell_specific')
+            .setDescription('Sell a specific amount of a specific fish 🎀')
+            .addStringOption(opt => 
+                opt.setName('fish_name')
+                .setDescription('The exact name of the fish you want to sell (e.g., Tuna, Kokomi)')
+                .setRequired(true)
+            )
+            .addIntegerOption(opt => 
+                opt.setName('quantity')
+                .setDescription('How many do you want to sell?')
+                .setRequired(true)
+                .setMinValue(1)
             )),
 
     execute: withErrorHandling(async (interaction, config, client) => {
@@ -42,25 +56,27 @@ export default {
                 const fishInRarity = FISH_TYPES.filter(f => f.rarity === rarity);
                 if (fishInRarity.length === 0) continue;
 
-                let pageText = `🌿 **${interaction.user.username.toUpperCase()}'S FISH INVENTORY** 🌿\n\n`;
-                pageText += `**${RARITY_CONFIG[rarity].label}:**\n`;
+                let pageText = `🫧 ⋆｡𖦹 °.⋆ **${interaction.user.username.toUpperCase()}'S AQUARIUM** ⋆.° 𖦹 🫧 ૮ ˶ᵔ ᵕ ᵔ˶ ა\n\n`;
+                pageText += `✨ **${RARITY_CONFIG[rarity].label} Collection** ✨:\n\n`;
                 
                 let index = 1;
                 for (const fish of fishInRarity) {
                     const count = userData.fishInventory[fish.name] || 0;
                     const price = formatMoney(RARITY_CONFIG[rarity].sellPrice);
                     
-                    pageText += `${index}. ${fish.name}\n`;
-                    pageText += `Caught: ${count}\n`;
-                    pageText += `Selling Price: ${price}\n\n`;
+                    pageText += `**${index}. ${fish.emoji} ${fish.name}**\n`;
+                    pageText += `╰┈➤ 🎣 Caught: **${count}**\n`;
+                    pageText += `╰┈➤ 💰 Selling Price: **${price}**\n\n`;
                     index++;
                 }
 
                 // Add selling instructions at the bottom of the page
-                pageText += `----------------------------------------\n`;
-                pageText += `💡 **How to sell:**\n`;
-                pageText += `Type \`/almanac sell rarity:${rarity}\` to sell all your ${RARITY_CONFIG[rarity].label} fish!\n`;
-                pageText += `Type \`/almanac sell rarity:all\` to sell everything at once.`;
+                pageText += `╭━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╮\n`;
+                pageText += `     🎀 **How to sell your fishies!** 🎀   \n`;
+                pageText += `  • \`/almanac sell rarity:${rarity}\` ➜ sell all ${RARITY_CONFIG[rarity].label}s!\n`;
+                pageText += `  • \`/almanac sell rarity:all\` ➜ sell EVERYTHING! 💸\n`;
+                pageText += `  • \`/almanac sell_specific fish_name:Name quantity:Amount\`\n`;
+                pageText += `╰━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╯`;
 
                 pages.push(pageText);
             }
@@ -98,7 +114,7 @@ export default {
 
                 collector.on('collect', async (i) => {
                     if (i.user.id !== interaction.user.id) {
-                        return i.reply({ content: "You cannot use these buttons.", ephemeral: true });
+                        return i.reply({ content: "( ｡ •̀ ᴖ •́ ｡) Hey! You cannot use these buttons.", ephemeral: true });
                     }
 
                     if (i.customId === 'prev') currentPage--;
@@ -137,7 +153,7 @@ export default {
             }
 
             if (soldCount === 0) {
-                throw createError('No Fish', ErrorTypes.VALIDATION, `You don't have any fish in this category to sell!`);
+                throw createError('No Fish', ErrorTypes.VALIDATION, `(╥﹏╥) You don't have any fish in this category to sell! Go catch some first! 🎣`);
             }
 
             userData.wallet += earned;
@@ -145,13 +161,44 @@ export default {
 
             const label = target === 'all' ? 'All Fish' : `${RARITY_CONFIG[target].label} Fish`;
             
-            // Plain text response for selling
-            let sellMessage = `✅ **SALE SUCCESSFUL!**\n\n`;
-            sellMessage += `You sold **${soldCount}**x *${label}* to the market.\n`;
-            sellMessage += `You earned: **${formatMoney(earned)}**\n`;
-            sellMessage += `💰 New Balance: **${formatMoney(userData.wallet)}**`;
+            let sellMessage = `(๑>◡<๑) **SALE SUCCESSFUL!** 🎉\n\n`;
+            sellMessage += `You sold **${soldCount}**x *${label}* to the market~!\n`;
+            sellMessage += `You earned: **${formatMoney(earned)}** 💖\n`;
+            sellMessage += `💰 New Balance: **${formatMoney(userData.wallet)}** ✧`;
 
             return InteractionHelper.safeEditReply(interaction, { content: sellMessage });
         }
-    }, { command: 'fishalmanac' })
+
+        if (sub === 'sell_specific') {
+            const fishNameInput = interaction.options.getString('fish_name');
+            const quantity = interaction.options.getInteger('quantity');
+
+            // Find the fish in the configuration (case-insensitive)
+            const fish = FISH_TYPES.find(f => f.name.toLowerCase() === fishNameInput.toLowerCase());
+
+            if (!fish) {
+                throw createError('Invalid Fish', ErrorTypes.VALIDATION, `( ˘︹˘ ) I couldn't find a fish named **${fishNameInput}**. Please check your spelling!`);
+            }
+
+            const currentAmount = userData.fishInventory[fish.name] || 0;
+
+            if (currentAmount < quantity) {
+                throw createError('Not Enough Fish', ErrorTypes.VALIDATION, `( ｡ •̀ ᴖ •́ ｡) You only have **${currentAmount}**x ${fish.name}. You cannot sell **${quantity}**!`);
+            }
+
+            const price = RARITY_CONFIG[fish.rarity].sellPrice;
+            const earned = price * quantity;
+
+            userData.fishInventory[fish.name] -= quantity;
+            userData.wallet += earned;
+            await setEconomyData(client, guildId, userId, userData);
+
+            let sellMessage = `( ˶ˆᗜˆ˵ ) **SALE SUCCESSFUL!** 🎀\n\n`;
+            sellMessage += `You sold **${quantity}**x *${fish.name}* ${fish.emoji} to the market!\n`;
+            sellMessage += `You earned: **${formatMoney(earned)}** 💖\n`;
+            sellMessage += `💰 New Balance: **${formatMoney(userData.wallet)}** ✨`;
+
+            return InteractionHelper.safeEditReply(interaction, { content: sellMessage });
+        }
+    }, { command: 'almanac' })
 };
