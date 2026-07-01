@@ -1,14 +1,8 @@
-import { SlashCommandBuilder } from 'discord.js';
-import { createEmbed } from '../../utils/embeds.js';
+import { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType } from 'discord.js';
 import { getEconomyData, setEconomyData } from '../../utils/economy.js';
 import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { RARITY_ORDER, RARITY_CONFIG, FISH_TYPES, formatMoney } from './modules/fishConfig.js';
-
-const RARITY_BLOCKS = {
-    common: '🟫', uncommon: '🟩', rare: '🟦', epic: '🟪', 
-    legendary: '🟨', mythic: '🟥', celestial: '🌠', secret: '💖'
-};
 
 export default {
     data: new SlashCommandBuilder()
@@ -41,41 +35,86 @@ export default {
         userData.fishInventory = userData.fishInventory || {};
 
         if (sub === 'view') {
-            let description = '';
-            let totalValue = 0;
-            const summary = [];
+            const pages = [];
 
+            // Build a separate page for each rarity
             for (const rarity of RARITY_ORDER) {
                 const fishInRarity = FISH_TYPES.filter(f => f.rarity === rarity);
                 if (fishInRarity.length === 0) continue;
 
-                const block = RARITY_BLOCKS[rarity] || '⬛';
-                let line = `${block} | `;
-                let countForRarity = 0;
-
+                let pageText = `🌿 **${interaction.user.username.toUpperCase()}'S FISH INVENTORY** 🌿\n\n`;
+                pageText += `**${RARITY_CONFIG[rarity].label}:**\n`;
+                
+                let index = 1;
                 for (const fish of fishInRarity) {
                     const count = userData.fishInventory[fish.name] || 0;
-                    countForRarity += count;
-                    totalValue += count * RARITY_CONFIG[rarity].sellPrice;
+                    const price = formatMoney(RARITY_CONFIG[rarity].sellPrice);
                     
-                    // Format like: 🐟 `001`
-                    line += `${fish.emoji} \`${count.toString().padStart(3, '0')}\` `;
+                    pageText += `${index}. ${fish.name}\n`;
+                    pageText += `Caught: ${count}\n`;
+                    pageText += `Selling Price: ${price}\n\n`;
+                    index++;
                 }
 
-                description += line.trim() + '\n';
-                const initial = rarity.charAt(0).toUpperCase() + (rarity === 'celestial' ? 'e' : '');
-                summary.push(`${initial}-${countForRarity}`);
+                // Add selling instructions at the bottom of the page
+                pageText += `----------------------------------------\n`;
+                pageText += `💡 **How to sell:**\n`;
+                pageText += `Type \`/almanac sell rarity:${rarity}\` to sell all your ${RARITY_CONFIG[rarity].label} fish!\n`;
+                pageText += `Type \`/almanac sell rarity:all\` to sell everything at once.`;
+
+                pages.push(pageText);
             }
 
-            const embed = createEmbed({
-                title: `🌿 🐟 ${interaction.user.username}'s Almanac 🐟 🌿`,
-                description: description,
-                color: '#1ABC9C',
-            })
-            .addFields({ name: 'Aquarium Value', value: `**${formatMoney(totalValue)}**`, inline: false })
-            .setFooter({ text: summary.join(', ') });
+            let currentPage = 0;
 
-            return InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
+            // Helper function to create the pagination buttons
+            const getRow = (current) => {
+                return new ActionRowBuilder().addComponents(
+                    new ButtonBuilder()
+                        .setCustomId('prev')
+                        .setLabel('◀ Previous')
+                        .setStyle(ButtonStyle.Secondary)
+                        .setDisabled(current === 0),
+                    new ButtonBuilder()
+                        .setCustomId('next')
+                        .setLabel('Next ▶')
+                        .setStyle(ButtonStyle.Secondary)
+                        .setDisabled(current === pages.length - 1)
+                );
+            };
+
+            // Send the first page
+            const message = await interaction.editReply({ 
+                content: pages[currentPage], 
+                components: pages.length > 1 ? [getRow(currentPage)] : [] 
+            });
+
+            // Handle button clicks for pagination
+            if (pages.length > 1) {
+                const collector = message.createMessageComponentCollector({ 
+                    componentType: ComponentType.Button, 
+                    time: 120000 // 2 minutes before buttons expire
+                });
+
+                collector.on('collect', async (i) => {
+                    if (i.user.id !== interaction.user.id) {
+                        return i.reply({ content: "You cannot use these buttons.", ephemeral: true });
+                    }
+
+                    if (i.customId === 'prev') currentPage--;
+                    if (i.customId === 'next') currentPage++;
+
+                    await i.update({ 
+                        content: pages[currentPage], 
+                        components: [getRow(currentPage)] 
+                    });
+                });
+
+                collector.on('end', () => {
+                    interaction.editReply({ components: [] }).catch(() => {});
+                });
+            }
+            return;
         }
 
         if (sub === 'sell') {
@@ -105,13 +144,14 @@ export default {
             await setEconomyData(client, guildId, userId, userData);
 
             const label = target === 'all' ? 'All Fish' : `${RARITY_CONFIG[target].label} Fish`;
-            const embed = createEmbed({
-                title: '💰 Fish Sold!',
-                description: `You sold **${soldCount}**x *${label}* to the market.\n\nYou earned **${formatMoney(earned)}**!`,
-                color: '#F1C40F',
-            }).addFields({ name: 'New Balance', value: formatMoney(userData.wallet), inline: true });
+            
+            // Plain text response for selling
+            let sellMessage = `✅ **SALE SUCCESSFUL!**\n\n`;
+            sellMessage += `You sold **${soldCount}**x *${label}* to the market.\n`;
+            sellMessage += `You earned: **${formatMoney(earned)}**\n`;
+            sellMessage += `💰 New Balance: **${formatMoney(userData.wallet)}**`;
 
-            return InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
+            return InteractionHelper.safeEditReply(interaction, { content: sellMessage });
         }
-    }, { command: 'almanac' })
+    }, { command: 'fishalmanac' })
 };
