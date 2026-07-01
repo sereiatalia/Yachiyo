@@ -4,25 +4,56 @@ import {
     ButtonBuilder,
     ButtonStyle,
     ComponentType,
+    Collection
 } from 'discord.js';
 import { createEmbed } from '../../utils/embeds.js';
-import { addMoney } from '../../utils/economy.js';
+import { addMoney, getEconomyData, removeMoney } from '../../utils/economy.js';
 import { withErrorHandling } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 const MAX_WRONG = 5;
-const REWARD = 100;
 const GAME_TIME = 5 * 60 * 1000; // 5 minutes
 
-const WORDS = [
-    'apple', 'banana', 'guitar', 'planet', 'castle', 'dragon', 'forest',
-    'wizard', 'rocket', 'bridge', 'jungle', 'puzzle', 'shadow', 'temple',
-    'window', 'cactus', 'engine', 'garden', 'harbor', 'island', 'kitten',
-    'lizard', 'mirror', 'needle', 'orange', 'pencil', 'quartz', 'ribbon',
-    'sunset', 'turtle', 'violet', 'wallet', 'yogurt', 'zombie', 'anchor',
-];
+// Setup a cooldown collection strictly for the Easy difficulty
+const easyCooldowns = new Collection();
+const COOLDOWN_TIME = 5 * 60 * 1000; // 5 minutes in milliseconds
 
-// ASCII gallows, indexed by number of wrong guesses (0..MAX_WRONG)
+// Difficulty configurations
+const DIFFICULTIES = {
+    easy: {
+        name: 'Easy',
+        fee: 0,
+        minReward: 20,
+        maxReward: 100,
+        words: [
+            'apple', 'cat', 'dog', 'sun', 'tree', 'book', 'fish', 'bird', 
+            'cake', 'shoe', 'hat', 'milk', 'door', 'moon', 'star', 'rain'
+        ]
+    },
+    medium: {
+        name: 'Medium',
+        fee: 250,
+        minReward: 500,
+        maxReward: 1500,
+        words: [
+            'guitar', 'planet', 'castle', 'dragon', 'forest', 'wizard', 
+            'rocket', 'bridge', 'jungle', 'puzzle', 'shadow', 'temple', 
+            'window', 'cactus', 'engine', 'garden', 'harbor', 'island'
+        ]
+    },
+    hard: {
+        name: 'Hard',
+        fee: 1000,
+        minReward: 2000,
+        maxReward: 5000,
+        words: [
+            'quartz', 'zombie', 'yacht', 'rhythm', 'symphony', 'paradox', 
+            'chrysanthemum', 'labyrinth', 'zephyr', 'kiosk', 'pharaoh', 
+            'sphinx', 'mnemonic', 'pseudonym', 'xylophone', 'bourgeoisie'
+        ]
+    }
+};
+
 const HANGMAN_STAGES = [
 `┌─────┐
 │
@@ -79,25 +110,25 @@ function renderWord(word, guessed) {
     return word
         .toUpperCase()
         .split('')
-        .map(ch => (guessed.has(ch) ? `\`${ch}\`` : '🔵'))
+        .map(ch => (guessed.has(ch) ? ch : '_'))
         .join(' ');
 }
 
-function buildEmbed(state, resultText = null) {
+function buildEmbed(state, reward, resultText = null) {
     const revealed = renderWord(state.word, state.guessed);
     const stage = HANGMAN_STAGES[state.wrong];
 
     const embed = createEmbed({
-        title: `Hangman - ${state.wrong}/${MAX_WRONG}`,
+        title: `Hangman (${state.difficultyName}) - ${state.wrong}/${MAX_WRONG}`,
         description: `\`\`\`\n${stage}\n\`\`\``,
         color: state.wrong >= MAX_WRONG ? '#E74C3C' : state.wrong >= 3 ? '#F39C12' : '#3498DB',
-    }).addFields({ name: `Word (${state.word.length})`, value: revealed, inline: false });
+    }).addFields({ name: `Word (${state.word.length} letters)`, value: `\`${revealed}\``, inline: false });
 
     if (resultText) {
         embed.addFields({ name: '\u200b', value: resultText, inline: false });
     }
 
-    embed.setFooter({ text: `Guess the word before the drawing is complete • Reward: $${REWARD}` });
+    embed.setFooter({ text: `Win up to $${reward} • Fee: $${state.fee}` });
     return embed;
 }
 
@@ -133,7 +164,6 @@ function buildRows(state) {
             .setDisabled(state.finished)
     );
 
-    // Attach the nav button to the last row if there's room, otherwise its own row
     const lastRow = rows[rows.length - 1];
     if (lastRow.components.length < 5) {
         lastRow.addComponents(navRow.components[0]);
@@ -146,13 +176,62 @@ export default {
     category: 'Economy',
     data: new SlashCommandBuilder()
         .setName('hangman')
-        .setDescription(`Play hangman and win $${REWARD} if you guess the word`),
+        .setDescription('Play hangman to win cash!')
+        .addStringOption(option => 
+            option.setName('difficulty')
+                .setDescription('Select the difficulty level')
+                .setRequired(true)
+                .addChoices(
+                    { name: 'Easy (Free, 5m cooldown, Win up to $100)', value: 'easy' },
+                    { name: 'Medium ($250 fee, Win up to $1.5k)', value: 'medium' },
+                    { name: 'Hard ($1000 fee, Win up to $5k)', value: 'hard' }
+                )
+        ),
 
     execute: withErrorHandling(async (interaction, config, client) => {
+        const difficultyKey = interaction.options.getString('difficulty');
+        const diffConfig = DIFFICULTIES[difficultyKey];
+        const userId = interaction.user.id;
+        const guildId = interaction.guildId;
+
+        // Check Cooldown BEFORE deferring for Easy mode
+        if (difficultyKey === 'easy') {
+            const lastPlayed = easyCooldowns.get(userId);
+            if (lastPlayed && Date.now() - lastPlayed < COOLDOWN_TIME) {
+                const remainingMinutes = Math.ceil((COOLDOWN_TIME - (Date.now() - lastPlayed)) / 1000 / 60);
+                return interaction.reply({ 
+                    content: `⏳ Easy mode is on cooldown. Try again in **${remainingMinutes} minute(s)**, or try a harder difficulty!`, 
+                    ephemeral: true 
+                });
+            }
+        }
+
         const deferred = await InteractionHelper.safeDefer(interaction);
         if (!deferred) return;
 
-        const word = WORDS[Math.floor(Math.random() * WORDS.length)];
+        // Economy Fee Check for Medium/Hard
+        if (diffConfig.fee > 0) {
+            const ecoData = await getEconomyData(client, guildId, userId);
+            const walletBalance = ecoData?.wallet || 0;
+
+            if (walletBalance < diffConfig.fee) {
+                return InteractionHelper.safeEditReply(interaction, { 
+                    content: `❌ You need at least **$${diffConfig.fee}** in your wallet to play on ${diffConfig.name} difficulty.` 
+                });
+            }
+            
+            // Deduct the fee
+            await removeMoney(client, guildId, userId, diffConfig.fee, 'wallet');
+        }
+
+        // Apply Cooldown for Easy
+        if (difficultyKey === 'easy') {
+            easyCooldowns.set(userId, Date.now());
+        }
+
+        // Select Word and Calculate Reward
+        const word = diffConfig.words[Math.floor(Math.random() * diffConfig.words.length)];
+        const rewardAmount = Math.floor(Math.random() * (diffConfig.maxReward - diffConfig.minReward + 1)) + diffConfig.minReward;
 
         const state = {
             word,
@@ -160,10 +239,12 @@ export default {
             wrong: 0,
             page: 0,
             finished: false,
+            difficultyName: diffConfig.name,
+            fee: diffConfig.fee
         };
 
         await InteractionHelper.safeEditReply(interaction, {
-            embeds: [buildEmbed(state)],
+            embeds: [buildEmbed(state, diffConfig.maxReward)],
             components: buildRows(state),
         });
 
@@ -177,7 +258,7 @@ export default {
         collector.on('collect', async i => {
             if (i.customId === 'hangman_nav') {
                 state.page = state.page === 0 ? 1 : 0;
-                await i.update({ embeds: [buildEmbed(state)], components: buildRows(state) });
+                await i.update({ embeds: [buildEmbed(state, diffConfig.maxReward)], components: buildRows(state) });
                 return;
             }
 
@@ -195,9 +276,9 @@ export default {
 
             if (wordComplete) {
                 state.finished = true;
-                await addMoney(client, interaction.guildId, interaction.user.id, REWARD, 'wallet');
+                await addMoney(client, interaction.guildId, interaction.user.id, rewardAmount, 'wallet');
                 await i.update({
-                    embeds: [buildEmbed(state, `🎉 **You won!** The word was **${word.toUpperCase()}**.\nYou earned **$${REWARD}**!`)],
+                    embeds: [buildEmbed(state, diffConfig.maxReward, `🎉 **You won!** The word was **${word.toUpperCase()}**.\nYou earned **$${rewardAmount}**!`)],
                     components: buildRows(state),
                 });
                 collector.stop('won');
@@ -207,15 +288,19 @@ export default {
             if (state.wrong >= MAX_WRONG) {
                 state.finished = true;
                 state.guessed = new Set(word.toUpperCase().split(''));
+                
+                let lossText = `💀 **You lost!** The word was **${word.toUpperCase()}**.`;
+                if (diffConfig.fee > 0) lossText += `\nYou lost your **$${diffConfig.fee}** entry fee.`;
+
                 await i.update({
-                    embeds: [buildEmbed(state, `💀 **You lost!** The word was **${word.toUpperCase()}**.\nYou earned **$0**.`)],
+                    embeds: [buildEmbed(state, diffConfig.maxReward, lossText)],
                     components: buildRows(state),
                 });
                 collector.stop('lost');
                 return;
             }
 
-            await i.update({ embeds: [buildEmbed(state)], components: buildRows(state) });
+            await i.update({ embeds: [buildEmbed(state, diffConfig.maxReward)], components: buildRows(state) });
         });
 
         collector.on('end', async (collected, reason) => {
@@ -224,7 +309,7 @@ export default {
 
             state.finished = true;
             await InteractionHelper.safeEditReply(interaction, {
-                embeds: [buildEmbed(state, '⏱️ **Game timed out.** No reward was given.')],
+                embeds: [buildEmbed(state, diffConfig.maxReward, '⏱️ **Game timed out.** No reward was given and fees are lost.')],
                 components: [],
             }).catch(() => {});
         });
