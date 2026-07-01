@@ -9,8 +9,8 @@ export const RARITY_CONFIG = {
     common:    { label: 'Common',    emoji: '⭐',    color: '#95A5A6', chance: 0.35, reward: [1, 20] },
     uncommon:  { label: 'Uncommon',  emoji: '⭐⭐',   color: '#2ECC71', chance: 0.25, reward: [15, 40] },
     rare:      { label: 'Rare',      emoji: '⭐⭐⭐',  color: '#3498DB', chance: 0.15, reward: [35, 65] },
-    epic:      { label: 'Epic',      emoji: '⭐⭐⭐⭐', color: '#9B59B6', chance: 0.08, reward: [55, 90] },
-    legendary: { label: 'Legendary', emoji: '🌟',    color: '#F1C40F', chance: 0.04, reward: [80, 150], pity: 100 },
+    epic:      { label: 'Epic',      emoji: '⭐⭐⭐⭐', color: '#9B59B6', chance: 0.08, reward: [55, 100] },
+    legendary: { label: 'Legendary', emoji: '🌟',    color: '#F1C40F', chance: 0.04, reward: [100, 200], pity: 100 },
     mythic:    { label: 'Mythic',    emoji: '💠',    color: '#E74C3C', chance: 0.02, reward: [200, 500], pity: 300 },
     secret:    { label: 'Secret',    emoji: '👑',    color: '#FF69B4', chance: 0.001, reward: [100000, 100000], pity: 1000 },
 };
