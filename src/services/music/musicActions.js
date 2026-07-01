@@ -502,4 +502,3 @@ export async function replyMusicSuccess(interaction, embed) {
     } else {
         await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
     }
-}
