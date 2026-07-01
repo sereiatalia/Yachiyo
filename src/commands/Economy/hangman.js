@@ -54,57 +54,6 @@ const DIFFICULTIES = {
     }
 };
 
-// Fixed standard ASCII gallows to ensure perfect alignment on all Discord clients
-const HANGMAN_STAGES = [
-`   +------+
-   |      |
-   |
-   |
-   |
-   |
-============`,
-
-`   +------+
-   |      |
-   |      O
-   |
-   |
-   |
-============`,
-
-`   +------+
-   |      |
-   |      O
-   |      |
-   |
-   |
-============`,
-
-`   +------+
-   |      |
-   |      O
-   |     /|
-   |
-   |
-============`,
-
-`   +------+
-   |      |
-   |      O
-   |     /|\\
-   |
-   |
-============`,
-
-`   +------+
-   |      |
-   |      O
-   |     /|\\
-   |     / \\
-   |
-============`
-];
-
 // Single page layout using 25 buttons (Y and Z are combined)
 const KEYBOARD_ROWS = [
     ['A', 'B', 'C', 'D', 'E'],
@@ -122,14 +71,26 @@ function renderWord(word, guessed) {
         .join(' ');
 }
 
+// Dynamically creates the heart lifepoint bar string based on current wrong answers
+function renderHearts(wrongCount) {
+    const totalLives = MAX_WRONG;
+    const currentLives = totalLives - wrongCount;
+    
+    const filledHearts = '❤️'.repeat(Math.max(0, currentLives));
+    const emptyHearts = '🤍'.repeat(Math.max(0, wrongCount));
+    
+    return `${filledHearts}${emptyHearts}\n**${currentLives} / ${totalLives}**`;
+}
+
 function buildEmbed(state, reward, resultText = null) {
     const revealed = renderWord(state.word, state.guessed);
-    const stage = HANGMAN_STAGES[state.wrong];
+    const heartDisplay = renderHearts(state.wrong);
 
     const embed = createEmbed({
-        title: `Hangman (${state.difficultyName}) - ${state.wrong}/${MAX_WRONG}`,
-        description: `\`\`\`\n${stage}\n\`\`\``,
-        color: state.wrong >= MAX_WRONG ? '#E74C3C' : state.wrong >= 3 ? '#F39C12' : '#3498DB',
+        title: `💕 GUESS THE WORD (${state.difficultyName}) 💕`,
+        description: `**Lives**\n${heartDisplay}`,
+        // Use hot pink/red colors to give it that "Guess the Word" theme aesthetic
+        color: state.wrong >= MAX_WRONG ? '#E74C3C' : '#FF69B4',
     }).addFields({ name: `Word (${state.word.length} letters)`, value: `\`${revealed}\``, inline: false });
 
     if (resultText) {
@@ -143,10 +104,8 @@ function buildEmbed(state, reward, resultText = null) {
 function letterButton(key, state) {
     const isYZ = key === 'YZ';
     
-    // For the combined YZ button, it counts as guessed if EITHER Y or Z is in the set
     const guessed = isYZ ? (state.guessed.has('Y') || state.guessed.has('Z')) : state.guessed.has(key);
     
-    // For YZ, it's correct if the word contains Y OR Z
     const isCorrect = isYZ 
         ? (state.word.toUpperCase().includes('Y') || state.word.toUpperCase().includes('Z')) 
         : state.word.toUpperCase().includes(key);
@@ -175,7 +134,7 @@ export default {
     category: 'Economy',
     data: new SlashCommandBuilder()
         .setName('hangman')
-        .setDescription('Play hangman to win cash!')
+        .setDescription('Guess the hidden word to win cash!')
         .addStringOption(option => 
             option.setName('difficulty')
                 .setDescription('Select the difficulty level')
@@ -288,7 +247,7 @@ export default {
                 state.finished = true;
                 state.guessed = new Set(word.toUpperCase().split(''));
                 
-                let lossText = `💀 **You lost!** The word was **${word.toUpperCase()}**.`;
+                let lossText = `❌ **You lost!** The word was **${word.toUpperCase()}**.`;
                 if (diffConfig.fee > 0) lossText += `\nYou lost your **$${diffConfig.fee}** entry fee.`;
 
                 await i.update({
