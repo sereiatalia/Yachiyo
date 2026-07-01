@@ -20,7 +20,7 @@ import {
 
 // NOTE: cooldown is currently disabled (45 * 60 * 0 = 0ms). Left as-is from
 // the original file — flag if you want this re-enabled.
-const FISH_COOLDOWN = 45 * 60 * 50;
+const FISH_COOLDOWN = 5 * 60 * 100;
 
 export default {
     data: new SlashCommandBuilder()
