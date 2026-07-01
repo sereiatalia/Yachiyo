@@ -1,17 +1,28 @@
 import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed } from '../../utils/embeds.js';
-// NOTE: this import assumes economy.js exposes a way to read every user's
-// economy record for a guild. This function likely does NOT exist yet in
-// your economy.js — you'll need to add it (or share economy.js with me so
-// I can wire this up to match your actual storage layer exactly).
-// Expected shape: an array of records like { userId, fishStats, ... } for
-// every user with economy data in the given guild.
-import { getAllEconomyData } from '../../utils/economy.js';
 import { withErrorHandling } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { RARITY_ORDER, RARITY_CONFIG, fishScore } from './modules/fishConfig.js';
 
 const LEADERBOARD_SIZE = 10;
+
+/**
+ * Reads every user's economy record for this guild directly from client.db,
+ * matching the same key pattern used in economy_dashboard.js:
+ *   economy:{guildId}:{userId}
+ */
+async function getAllEconomyData(client, guildId) {
+    const keys = await client.db.list(`economy:${guildId}:`);
+    if (!keys || keys.length === 0) return [];
+
+    const results = [];
+    for (const key of keys) {
+        const userId = key.split(':').pop();
+        const userData = await client.db.get(key, {});
+        results.push({ userId, ...userData });
+    }
+    return results;
+}
 
 export default {
     data: new SlashCommandBuilder()
