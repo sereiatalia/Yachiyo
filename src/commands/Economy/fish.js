@@ -4,9 +4,9 @@ import { getEconomyData, setEconomyData } from '../../utils/economy.js';
 import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 
-const FISH_COOLDOWN = 45 * 60 * 100; 
-const BASE_MIN_REWARD = 100;
-const BASE_MAX_REWARD = 900;
+const FISH_COOLDOWN = 45 * 60 * 0; 
+const BASE_MIN_REWARD = 1;
+const BASE_MAX_REWARD = 100;
 const FISHING_ROD_MULTIPLIER = 1.5;
 
 const FISH_TYPES = [
@@ -125,7 +125,7 @@ export default {
                         inline: true,
                     }
                 )
-                .setFooter({ text: `Next fishing trip available in 45 minutes.` });
+                .setFooter({ text: `Cast your line, catch rare fish, and earn rewards! 🎣` });
 
             await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
     }, { command: 'fish' })
