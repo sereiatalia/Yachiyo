@@ -16,8 +16,8 @@ export const RARITY_CONFIG = {
     secret:    { label: 'Secret',    emoji: '👑',    color: '#FF69B4', chance: 0.000001, reward: [100000, 100000], pity: 5000 },
 };
 
-export const ESCAPE_CHANCE = 0.3;
-export const JUNK_CHANCE = 0.2;
+export const ESCAPE_CHANCE = 0.1;
+export const JUNK_CHANCE = 0.1;
 
 export const FISH_TYPES = [
     { name: 'Bass',              emoji: '🐟', rarity: 'common' },
