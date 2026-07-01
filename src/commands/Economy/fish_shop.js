@@ -3,11 +3,11 @@ import { createEmbed } from '../../utils/embeds.js';
 import { getEconomyData, setEconomyData } from '../../utils/economy.js';
 import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
-import { RODS, getEquippedRod, formatMoney } from '../../utils/fishConfig.js';
+import { RODS, getEquippedRod, formatMoney } from './modules/fishConfig.js';
 
 export default {
     data: new SlashCommandBuilder()
-        .setName('fish_shop')
+        .setName('fishshop')
         .setDescription('Buy fishing rods to improve your odds and rewards')
         .addSubcommand(sub =>
             sub.setName('view').setDescription('View the fishing rod shop'))
@@ -97,5 +97,5 @@ export default {
 
             return InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
         }
-    }, { command: 'fish_shop' })
+    }, { command: 'fishshop' })
 };
