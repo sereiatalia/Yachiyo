@@ -103,7 +103,7 @@ export default {
             }
 
             userData.wallet += finalEarned;
-            recordCatch(userData, outcome);
+            recordCatch(userData, outcome, fishCaught.name);
 
             const isSecret = outcome === 'secret';
 
