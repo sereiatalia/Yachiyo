@@ -4,6 +4,17 @@ import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHan
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { RARITY_ORDER, RARITY_CONFIG, FISH_TYPES, formatMoney } from './modules/fishConfig.js';
 
+const PAGE_DECORATIONS = {
+    common: { kaomoji: '૮ ˶ᵔ ᵕ ᵔ˶ ა', divider: '--------🪼⋆｡𖦹°🫧⋆.ೃ࿔*:･--------' },
+    uncommon: { kaomoji: '( ˶ˆᗜˆ˵ )', divider: '--------🦀⋆｡𖦹°🐚⋆.ೃ࿔*:･--------' },
+    rare: { kaomoji: '(๑>◡<๑)', divider: '--------🐬⋆｡𖦹°🌊⋆.ೃ࿔*:･--------' },
+    epic: { kaomoji: '( ˘͈ ᵕ ˘͈♡)', divider: '--------🦈⋆｡𖦹°🦑⋆.ೃ࿔*:･--------' },
+    legendary: { kaomoji: '(☆▽☆)', divider: '--------🐋⋆｡𖦹°🌟⋆.ೃ࿔*:･--------' },
+    mythic: { kaomoji: '(⋈◍＞◡＜◍)。✧♡', divider: '--------🐙⋆｡𖦹°🔱⋆.ೃ࿔*:･--------' },
+    celestial: { kaomoji: '⋆ ˚｡⋆୨୧˚', divider: '--------💫⋆｡𖦹°🌠⋆.ೃ࿔*:･--------' },
+    secret: { kaomoji: '👑 ૮(˶ᵔ ᵕ ᵔ˶)ა 👑', divider: '--------💖⋆｡𖦹°🧜‍♀️⋆.ೃ࿔*:･--------' }
+};
+
 export default {
     data: new SlashCommandBuilder()
         .setName('almanac')
@@ -56,27 +67,26 @@ export default {
                 const fishInRarity = FISH_TYPES.filter(f => f.rarity === rarity);
                 if (fishInRarity.length === 0) continue;
 
-                let pageText = `🫧 ⋆｡𖦹 °.⋆ **${interaction.user.username.toUpperCase()}'S AQUARIUM** ⋆.° 𖦹 🫧 ૮ ˶ᵔ ᵕ ᵔ˶ ა\n\n`;
-                pageText += `✨ **${RARITY_CONFIG[rarity].label} Collection** ✨:\n\n`;
+                const decor = PAGE_DECORATIONS[rarity] || PAGE_DECORATIONS.common;
+
+                let pageText = `📖 ₊˚ ${interaction.user.username.toUpperCase()}'S AQUARIUM 𓏲 ๋࣭ ࣪ ˖🎐\n\n`;
+                pageText += `${decor.kaomoji} ${RARITY_CONFIG[rarity].label} Collection :\n\n`;
                 
-                let index = 1;
                 for (const fish of fishInRarity) {
                     const count = userData.fishInventory[fish.name] || 0;
                     const price = formatMoney(RARITY_CONFIG[rarity].sellPrice);
                     
-                    pageText += `**${index}. ${fish.emoji} ${fish.name}**\n`;
-                    pageText += `╰┈➤ 🎣 Caught: **${count}**\n`;
-                    pageText += `╰┈➤ 💰 Selling Price: **${price}**\n\n`;
-                    index++;
+                    pageText += `${fish.name}\n`;
+                    pageText += `𑣲 Caught: ${count}\n`;
+                    pageText += `𑣲 Selling Price: ${price}\n\n`;
                 }
 
-                // Add selling instructions at the bottom of the page
-                pageText += `╭━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╮\n`;
-                pageText += `     🎀 **How to sell your fishies!** 🎀   \n`;
-                pageText += `  • \`/almanac sell rarity:${rarity}\` ➜ sell all ${RARITY_CONFIG[rarity].label}s!\n`;
-                pageText += `  • \`/almanac sell rarity:all\` ➜ sell EVERYTHING! 💸\n`;
-                pageText += `  • \`/almanac sell_specific fish_name:Name quantity:Amount\`\n`;
-                pageText += `╰━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╯`;
+                // Add aesthetic divider and selling instructions
+                pageText += `${decor.divider}\n\n`;
+                pageText += `💰How to sell your fishies⭑.ᐟ\n`;
+                pageText += `• /almanac sell rarity:${rarity} ➜ sell all ${RARITY_CONFIG[rarity].label}s!\n`;
+                pageText += `• /almanac sell rarity:all ➜ sell EVERYTHING!\n`;
+                pageText += `• /almanac sell_specific fish_name:Name quantity:Amount`;
 
                 pages.push(pageText);
             }
@@ -139,7 +149,6 @@ export default {
             let soldCount = 0;
 
             for (const fish of FISH_TYPES) {
-                // If targeting a specific rarity, skip fish that don't match
                 if (target !== 'all' && fish.rarity !== target) continue;
 
                 const count = userData.fishInventory[fish.name] || 0;
@@ -147,7 +156,6 @@ export default {
                     const price = RARITY_CONFIG[fish.rarity].sellPrice;
                     earned += (count * price);
                     soldCount += count;
-                    // Remove fish from inventory upon selling
                     userData.fishInventory[fish.name] = 0; 
                 }
             }
@@ -173,7 +181,6 @@ export default {
             const fishNameInput = interaction.options.getString('fish_name');
             const quantity = interaction.options.getInteger('quantity');
 
-            // Find the fish in the configuration (case-insensitive)
             const fish = FISH_TYPES.find(f => f.name.toLowerCase() === fishNameInput.toLowerCase());
 
             if (!fish) {
@@ -194,7 +201,7 @@ export default {
             await setEconomyData(client, guildId, userId, userData);
 
             let sellMessage = `( ˶ˆᗜˆ˵ ) **SALE SUCCESSFUL!** 🎀\n\n`;
-            sellMessage += `You sold **${quantity}**x *${fish.name}* ${fish.emoji} to the market!\n`;
+            sellMessage += `You sold **${quantity}**x *${fish.name}* to the market!\n`;
             sellMessage += `You earned: **${formatMoney(earned)}** 💖\n`;
             sellMessage += `💰 New Balance: **${formatMoney(userData.wallet)}** ✨`;
 
