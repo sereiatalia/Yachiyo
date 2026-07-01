@@ -18,7 +18,7 @@ export const RARITY_CONFIG = {
 // Non-fish outcomes. These + all RARITY_CONFIG chances above should sum to 1.0
 // (0.05 + 0.05 + 0.35 + 0.25 + 0.15 + 0.08 + 0.04 + 0.02 + 0.01 = 1.00).
 export const ESCAPE_CHANCE = 0.3;
-export const JUNK_CHANCE = 0.4;
+export const JUNK_CHANCE = 0.2;
 
 export const FISH_TYPES = [
     { name: 'Bass',              emoji: '🐟', rarity: 'common' },
