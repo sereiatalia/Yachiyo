@@ -20,7 +20,13 @@ export default {
         .setName('almanac')
         .setDescription('View your caught fish and sell them for cash! ( ˶ˆᗜˆ˵ )')
         .addSubcommand(sub => 
-            sub.setName('view').setDescription('View your beautiful fish collection ✨'))
+            sub.setName('view')
+            .setDescription('View a beautiful fish collection ✨')
+            .addUserOption(opt => 
+                opt.setName('user')
+                .setDescription('The user whose almanac you want to view')
+                .setRequired(false)
+            ))
         .addSubcommand(sub => 
             sub.setName('sell')
             .setDescription('Sell your caught fish by rarity category 💰')
@@ -52,14 +58,15 @@ export default {
         const deferred = await InteractionHelper.safeDefer(interaction);
         if (!deferred) return;
 
-        const userId = interaction.user.id;
+        const runnerId = interaction.user.id;
         const guildId = interaction.guildId;
         const sub = interaction.options.getSubcommand();
-        
-        const userData = await getEconomyData(client, guildId, userId);
-        userData.fishInventory = userData.fishInventory || {};
 
         if (sub === 'view') {
+            const targetUser = interaction.options.getUser('user') || interaction.user;
+            const targetData = await getEconomyData(client, guildId, targetUser.id);
+            targetData.fishInventory = targetData.fishInventory || {};
+
             const pages = [];
 
             // Build a separate page for each rarity
@@ -69,24 +76,29 @@ export default {
 
                 const decor = PAGE_DECORATIONS[rarity] || PAGE_DECORATIONS.common;
 
-                let pageText = `📖 ₊˚ ${interaction.user.username.toUpperCase()}'S AQUARIUM 𓏲 ๋࣭ ࣪ ˖🎐\n\n`;
-                pageText += `${decor.kaomoji} ${RARITY_CONFIG[rarity].label} Collection :\n\n`;
+                let pageText = `📖 ₊˚ **${targetUser.username.toUpperCase()}'S AQUARIUM** 𓏲 ๋࣭ ࣪ ˖🎐\n\n`;
+                pageText += `${decor.kaomoji} **${RARITY_CONFIG[rarity].label} Collection :**\n\n`;
                 
                 for (const fish of fishInRarity) {
-                    const count = userData.fishInventory[fish.name] || 0;
+                    const count = targetData.fishInventory[fish.name] || 0;
                     const price = formatMoney(RARITY_CONFIG[rarity].sellPrice);
                     
-                    pageText += `${fish.name}\n`;
+                    pageText += `**${fish.name}**\n`;
                     pageText += `𑣲 Caught: ${count}\n`;
                     pageText += `𑣲 Selling Price: ${price}\n\n`;
                 }
 
-                // Add aesthetic divider and selling instructions
                 pageText += `${decor.divider}\n\n`;
-                pageText += `💰How to sell your fishies⭑.ᐟ\n`;
-                pageText += `• /almanac sell rarity:${rarity} ➜ sell all ${RARITY_CONFIG[rarity].label}s!\n`;
-                pageText += `• /almanac sell rarity:all ➜ sell EVERYTHING!\n`;
-                pageText += `• /almanac sell_specific fish_name:Name quantity:Amount`;
+
+                // If viewing their own almanac, show how to sell. If viewing someone else's, hide it!
+                if (targetUser.id === interaction.user.id) {
+                    pageText += `**💰How to sell your fishies⭑.ᐟ**\n`;
+                    pageText += `• \`/almanac sell rarity:${rarity}\` ➔ sell all ${RARITY_CONFIG[rarity].label}s!\n`;
+                    pageText += `• \`/almanac sell rarity:all\` ➔ sell EVERYTHING! 💸\n`;
+                    pageText += `• \`/almanac sell_specific fish_name:Name quantity:Amount\``;
+                } else {
+                    pageText += `*(Viewing ${targetUser.username}'s collection)*`;
+                }
 
                 pages.push(pageText);
             }
@@ -143,6 +155,10 @@ export default {
             return;
         }
 
+        // --- Selling Logic --- (Always targets the person running the command)
+        const userData = await getEconomyData(client, guildId, runnerId);
+        userData.fishInventory = userData.fishInventory || {};
+
         if (sub === 'sell') {
             const target = interaction.options.getString('rarity');
             let earned = 0;
@@ -165,7 +181,7 @@ export default {
             }
 
             userData.wallet += earned;
-            await setEconomyData(client, guildId, userId, userData);
+            await setEconomyData(client, guildId, runnerId, userData);
 
             const label = target === 'all' ? 'All Fish' : `${RARITY_CONFIG[target].label} Fish`;
             
@@ -198,7 +214,7 @@ export default {
 
             userData.fishInventory[fish.name] -= quantity;
             userData.wallet += earned;
-            await setEconomyData(client, guildId, userId, userData);
+            await setEconomyData(client, guildId, runnerId, userData);
 
             let sellMessage = `( ˶ˆᗜˆ˵ ) **SALE SUCCESSFUL!** 🎀\n\n`;
             sellMessage += `You sold **${quantity}**x *${fish.name}* to the market!\n`;
