@@ -41,13 +41,12 @@ export default {
 
         if (now < lastFish + FISH_COOLDOWN) {
             const remaining = lastFish + FISH_COOLDOWN - now;
-            const hours = Math.floor(remaining / (1000 * 60 * 60));
-            const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((remaining % (1000 * 60)) / 1000);
 
             throw createError(
                 "Fishing cooldown active",
                 ErrorTypes.RATE_LIMIT,
-                `You're too tired to fish right now. Rest for **${hours}h ${minutes}m** before fishing again.`,
+                `You're too tired to fish right now. Rest for **${seconds}s** before fishing again.`,
                 { remaining, cooldownType: 'fish' }
             );
         }
