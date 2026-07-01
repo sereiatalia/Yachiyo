@@ -8,7 +8,7 @@ const BASE_WIN_CHANCE = 0.4;
 const CLOVER_WIN_BONUS = 0.2;
 const CHARM_WIN_BONUS = 0.1;
 const PAYOUT_MULTIPLIER = 1.5;
-const GAMBLE_COOLDOWN = 5 * 60 * 10;
+const GAMBLE_COOLDOWN = 5 * 60 * 100;
 
 export default {
     data: new SlashCommandBuilder()
@@ -121,7 +121,7 @@ userData.lastGamble = now;
                 });
             } else {
                 resultEmbed.setFooter({
-                    text: `Next gamble available in 5 minutes. Base win chance: ${Math.round(BASE_WIN_CHANCE * 100)}%.`,
+                    text: `Bet your coins, test your luck, and chase the jackpot! Base win chance: ${Math.round(BASE_WIN_CHANCE * 100)}%.`,
                 });
             }
 
