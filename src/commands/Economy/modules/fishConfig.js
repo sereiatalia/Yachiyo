@@ -12,7 +12,7 @@ export const RARITY_CONFIG = {
     epic:      { label: 'Epic',      emoji: '⭐⭐⭐⭐', color: '#9B59B6', chance: 0.08, reward: [55, 100] },
     legendary: { label: 'Legendary', emoji: '🌟',    color: '#F1C40F', chance: 0.04, reward: [100, 200], pity: 100 },
     mythic:    { label: 'Mythic',    emoji: '💠',    color: '#E74C3C', chance: 0.02, reward: [200, 500], pity: 300 },
-    secret:    { label: 'Secret',    emoji: '👑',    color: '#FF69B4', chance: 0.00001, reward: [100000, 100000], pity: 1000 },
+    secret:    { label: 'Secret',    emoji: '👑',    color: '#FF69B4', chance: 0.0000001, reward: [100000, 100000], pity: 1000 },
 };
 
 // Non-fish outcomes. These + all RARITY_CONFIG chances above should sum to 1.0
