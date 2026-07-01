@@ -66,10 +66,10 @@ export const CATCH_MESSAGES = [
 // Fishing rods available in the shop. Higher tier = higher price, bigger
 // payout bonus, and better odds (via luckBonus, see buildOutcomeTable).
 export const RODS = [
-    { id: 'basic_rod',    name: 'Basic Fishing Rod',    emoji: '🎣', price: 500,   valueBonus: 0.25, luckBonus: 0.02, description: '+25% catch value, slightly better odds' },
-    { id: 'advanced_rod', name: 'Advanced Fishing Rod', emoji: '🎣', price: 2500,  valueBonus: 0.50, luckBonus: 0.05, description: '+50% catch value, better odds' },
-    { id: 'master_rod',   name: 'Master Fishing Rod',   emoji: '🎣', price: 10000, valueBonus: 1.00, luckBonus: 0.10, description: '+100% catch value, great odds' },
-    { id: 'mythic_rod',   name: 'Mythical Rod',         emoji: '🎣', price: 50000, valueBonus: 1.50, luckBonus: 0.20, description: '+150% catch value, best odds, rarer junk/escapes' },
+    { id: 'basic_rod',    name: 'Basic Fishing Rod',    emoji: '🎣', price: 5000,    valueBonus: 0.25, luckBonus: 0.02, description: '+25% catch value, slightly better odds' },
+    { id: 'advanced_rod', name: 'Advanced Fishing Rod', emoji: '🎣', price: 25000,   valueBonus: 0.50, luckBonus: 0.05, description: '+50% catch value, better odds' },
+    { id: 'master_rod',   name: 'Master Fishing Rod',   emoji: '🎣', price: 100000,  valueBonus: 1.00, luckBonus: 0.10, description: '+100% catch value, great odds' },
+    { id: 'mythic_rod',   name: 'Mythical Rod',         emoji: '🎣', price: 500000,  valueBonus: 1.50, luckBonus: 0.20, description: '+150% catch value, best odds, rarer junk/escapes' },
 ];
 
 /**
