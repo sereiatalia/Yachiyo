@@ -56,54 +56,56 @@ const DIFFICULTIES = {
 
 const HANGMAN_STAGES = [
 `┌─────┐
-│
-│
-│
-│
-│
-┴──────`,
+│     │
+│      
+│      
+│      
+│      
+┴───────`,
 `┌─────┐
-│     ☹
-│
-│
-│
-│
-┴──────`,
+│     │
+│     O
+│      
+│      
+│      
+┴───────`,
 `┌─────┐
-│     ☹
+│     │
+│     O
 │     |
-│
-│
-│
-┴──────`,
+│      
+│      
+┴───────`,
 `┌─────┐
-│     ☹
+│     │
+│     O
 │    /|
-│
-│
-│
-┴──────`,
+│      
+│      
+┴───────`,
 `┌─────┐
-│     ☹
+│     │
+│     O
 │    /|\\
-│
-│
-│
-┴──────`,
+│      
+│      
+┴───────`,
 `┌─────┐
-│     ☹
+│     │
+│     O
 │    /|\\
 │    / \\
-│
-│
-┴──────`,
+│      
+┴───────`,
 ];
 
-const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
-
-const PAGES = [
-    [['A', 'B', 'C', 'D', 'E'], ['F', 'G', 'H', 'I', 'J'], ['K', 'L', 'M', 'N']],
-    [['O', 'P', 'Q', 'R', 'S'], ['T', 'U', 'V', 'W', 'X'], ['Y', 'Z']],
+// Single page layout using 25 buttons (Y and Z are combined)
+const KEYBOARD_ROWS = [
+    ['A', 'B', 'C', 'D', 'E'],
+    ['F', 'G', 'H', 'I', 'J'],
+    ['K', 'L', 'M', 'N', 'O'],
+    ['P', 'Q', 'R', 'S', 'T'],
+    ['U', 'V', 'W', 'X', 'YZ']
 ];
 
 function renderWord(word, guessed) {
@@ -132,13 +134,20 @@ function buildEmbed(state, reward, resultText = null) {
     return embed;
 }
 
-function letterButton(letter, state) {
-    const guessed = state.guessed.has(letter);
-    const isCorrect = guessed && state.word.toUpperCase().includes(letter);
+function letterButton(key, state) {
+    const isYZ = key === 'YZ';
+    
+    // For the combined YZ button, it counts as guessed if EITHER Y or Z is in the set
+    const guessed = isYZ ? (state.guessed.has('Y') || state.guessed.has('Z')) : state.guessed.has(key);
+    
+    // For YZ, it's correct if the word contains Y OR Z
+    const isCorrect = isYZ 
+        ? (state.word.toUpperCase().includes('Y') || state.word.toUpperCase().includes('Z')) 
+        : state.word.toUpperCase().includes(key);
 
     const button = new ButtonBuilder()
-        .setCustomId(`hangman_guess_${letter}`)
-        .setLabel(letter)
+        .setCustomId(`hangman_guess_${key}`)
+        .setLabel(isYZ ? 'Y / Z' : key)
         .setDisabled(guessed || state.finished);
 
     if (guessed) {
@@ -151,25 +160,9 @@ function letterButton(letter, state) {
 }
 
 function buildRows(state) {
-    const pageLetters = PAGES[state.page];
-    const rows = pageLetters.map(rowLetters =>
-        new ActionRowBuilder().addComponents(rowLetters.map(l => letterButton(l, state)))
+    return KEYBOARD_ROWS.map(rowLetters =>
+        new ActionRowBuilder().addComponents(rowLetters.map(key => letterButton(key, state)))
     );
-
-    const navRow = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-            .setCustomId('hangman_nav')
-            .setEmoji(state.page === 0 ? '▶️' : '◀️')
-            .setStyle(ButtonStyle.Secondary)
-            .setDisabled(state.finished)
-    );
-
-    const lastRow = rows[rows.length - 1];
-    if (lastRow.components.length < 5) {
-        lastRow.addComponents(navRow.components[0]);
-        return rows;
-    }
-    return [...rows, navRow];
 }
 
 export default {
@@ -194,7 +187,6 @@ export default {
         const userId = interaction.user.id;
         const guildId = interaction.guildId;
 
-        // Check Cooldown BEFORE deferring for Easy mode
         if (difficultyKey === 'easy') {
             const lastPlayed = easyCooldowns.get(userId);
             if (lastPlayed && Date.now() - lastPlayed < COOLDOWN_TIME) {
@@ -209,7 +201,6 @@ export default {
         const deferred = await InteractionHelper.safeDefer(interaction);
         if (!deferred) return;
 
-        // Economy Fee Check for Medium/Hard
         if (diffConfig.fee > 0) {
             const ecoData = await getEconomyData(client, guildId, userId);
             const walletBalance = ecoData?.wallet || 0;
@@ -219,17 +210,13 @@ export default {
                     content: `❌ You need at least **$${diffConfig.fee}** in your wallet to play on ${diffConfig.name} difficulty.` 
                 });
             }
-            
-            // Deduct the fee
             await removeMoney(client, guildId, userId, diffConfig.fee, 'wallet');
         }
 
-        // Apply Cooldown for Easy
         if (difficultyKey === 'easy') {
             easyCooldowns.set(userId, Date.now());
         }
 
-        // Select Word and Calculate Reward
         const word = diffConfig.words[Math.floor(Math.random() * diffConfig.words.length)];
         const rewardAmount = Math.floor(Math.random() * (diffConfig.maxReward - diffConfig.minReward + 1)) + diffConfig.minReward;
 
@@ -237,7 +224,6 @@ export default {
             word,
             guessed: new Set(),
             wrong: 0,
-            page: 0,
             finished: false,
             difficultyName: diffConfig.name,
             fee: diffConfig.fee
@@ -256,16 +242,23 @@ export default {
         });
 
         collector.on('collect', async i => {
-            if (i.customId === 'hangman_nav') {
-                state.page = state.page === 0 ? 1 : 0;
-                await i.update({ embeds: [buildEmbed(state, diffConfig.maxReward)], components: buildRows(state) });
-                return;
+            const key = i.customId.replace('hangman_guess_', '');
+            let madeMistake = false;
+
+            if (key === 'YZ') {
+                state.guessed.add('Y');
+                state.guessed.add('Z');
+                if (!word.toUpperCase().includes('Y') && !word.toUpperCase().includes('Z')) {
+                    madeMistake = true;
+                }
+            } else {
+                state.guessed.add(key);
+                if (!word.toUpperCase().includes(key)) {
+                    madeMistake = true;
+                }
             }
 
-            const letter = i.customId.replace('hangman_guess_', '');
-            state.guessed.add(letter);
-
-            if (!word.toUpperCase().includes(letter)) {
+            if (madeMistake) {
                 state.wrong += 1;
             }
 
